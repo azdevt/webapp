@@ -7,7 +7,7 @@ trigger:
 - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'windows-latest'
 
 variables:
   solution: '**/*.sln'
@@ -15,33 +15,31 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- task: UseDotNet@2
-  displayName: Install .NET 6
-  inputs: 
-    packageType: 'sdk'
-    version: 6.x
-
-- task: DotNetCoreCLI@2
-  displayName: Build
+- task: NuGetToolInstaller@1
+ 
+- task: NuGetCommand@2
   inputs:
-    command: build
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
-
-- task: DotNetCoreCLI@2
+    restoreSolution: '$(solution)'
+- task: SonarCloudPrepare@1
   inputs:
-    command: 'restore'
-    projects: '**/*.csproj'    
+    SonarCloud: 'sonarcloud'
+    organization: 'dev-orgg'
+    scannerMode: 'MSBuild'
+    projectKey: 'agile'
+    projectName: 'agile'
 
-- task: DotNetCoreCLI@2
+- task: VSBuild@1
   inputs:
-    command: test
-    projects: '**/webtest.csproj'
-    arguments: '/p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput=./MyCoverage/'
-    publishTestResults: true
+    solution: '$(solution)'
+    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+- task: SonarCloudAnalyze@1
 
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish Code Coverage Results'
+- task: SonarCloudPublish@1
   inputs:
-    codeCoverageTool: 'Cobertura'
-    summaryFileLocation: '$(Build.SourcesDirectory)/**/MyCoverage/coverage.cobertura.xml'
+    pollingTimeoutSec: '300'
+
+
+  
+
